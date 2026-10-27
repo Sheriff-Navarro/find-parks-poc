@@ -70,11 +70,28 @@ The track chats did not record start and stop times, and I was working on this o
 
 ## AI conversation logs
 
-Every chat used for this project is kept in `ai-logs/`, unedited. That includes the planning chat, each Wave/Track chat, and each commit chat. The work was split into those Wave/Track prompts. The prompts, and the files each track may edit, are in `PLAN.md`.
+Every chat used for this project is kept in `ai-logs/`, unedited. That includes the planning chat, each Wave/Track chat, and an outside review of the plan. The work was split into those Wave/Track prompts. The prompts, and the files each track may edit, are in `PLAN.md`.
 
-W6.T1 replaces the placeholder below. One line per file: the file name, and the track or step it covers.
+All logs are in `ai-logs/transcripts/`. The numbered `.jsonl` files are raw Cursor transcripts in the order they ran, each renamed for its track and otherwise unchanged. There were no separate commit chats.
 
-- _(placeholder — W6.T1: file name in `ai-logs/`, and the track it covers)_
+- `00-planning.jsonl`: planning chat that produced `PLAN.md`, `progress.md`, and the shared rule.
+- `01-W1.T1-scaffold.jsonl`: W1.T1 scaffold.
+- `02-W2.T1-data-layer.jsonl`: W2.T1 data layer.
+- `03-W2.T2-ui-primitives.jsonl`: W2.T2 UI primitives.
+- `04-W2.T3-map-component.jsonl`: W2.T3 map component.
+- `05-W3.T1-home-page.jsonl`: W3.T1 home page.
+- `06-W3.T2-detail-page.jsonl`: W3.T2 detail page.
+- `07-W4.T1-search.jsonl`: W4.T1 search.
+- `08-W4.T2-readme-draft.jsonl`: W4.T2 README draft.
+- `09-bugfix-planning-W2.T4-W4.T3.jsonl`: parent chat that ran the RCAs and the two bugfix tracks before W5.T1, through the subagents below.
+- `09a-subagent-rca-map-keyboard.jsonl`: subagent, read-only RCA for keyboard access to map markers.
+- `09b-subagent-rca-search-back-link.jsonl`: subagent, read-only RCA for "Back to all parks" dropping the search.
+- `09c-subagent-W2.T4-map-marker-keyboard.jsonl`: subagent, W2.T4 map marker keyboard access.
+- `09d-subagent-W4.T3-preserve-search.jsonl`: subagent, W4.T3 preserve `?q=` on "Back to all parks" (its prompt says W4.T2; it was recorded as W4.T3).
+- `10-W5.T1-verification.jsonl`: W5.T1 verification pass.
+- `11-parkmap-simplify-refactor.jsonl`: follow-up chat after W5.T1 that simplified `ParkMap.tsx` without changing behavior. It is not a `PLAN.md` track.
+- `12-W6.T1-ai-log-export.jsonl`: W6.T1 AI log export (this index).
+- `grokbot-review-parkplan.md`: a Grok chat reviewing the park.tsx, held outside Cursor, to help simplify and make code human readable
 
 ## Verification results
 

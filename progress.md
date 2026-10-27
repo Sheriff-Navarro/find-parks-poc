@@ -1,6 +1,6 @@
 # Find a Park - Progress
 
-Current wave: 6
+Current wave: complete
 
 Status values: TODO, IN PROGRESS, DONE, COMMITTED. Each agent edits only its own block.
 
@@ -240,7 +240,17 @@ Notes:
 Commit:
 
 ## W6.T1 AI log export
-Status: TODO
+Status: DONE
+Files touched:
+- ai-logs/transcripts/ (new; 17 renamed byte-for-byte copies)
+- README.md ("AI conversation logs" section only)
+- progress.md (this block, and "Current wave" set to complete)
 Files in ai-logs/:
+- ai-logs/transcripts/00-planning.jsonl through 12-W6.T1-ai-log-export.jsonl, plus grokbot-review-parkplan.md (added by the human; described from its file name only, not opened). All 18 are indexed in README "AI conversation logs".
+- ai-logs/cursor/ is now an empty folder.
 Notes:
+- The human copied raw transcripts into ai-logs/cursor/ under UUID names. At the human's request, each transcript's first prompt was read to identify its track, and the files were copied (`cp -p`, contents unchanged) into ai-logs/transcripts/ under ordered WTS names. The originals were not edited or moved.
+- Subagent files 09a-09d came from a7631369's subagents/ folder. 09d's prompt calls the track W4.T2; it is listed as W4.T3 to match PLAN.md and this file.
+- 11-parkmap-simplify-refactor is a follow-up chat after W5.T1, not a PLAN.md track. No separate commit chats were found.
+- Follow-up: this chat's transcript (12-W6.T1-ai-log-export.jsonl) was copied while the chat was still running. Re-copy fb57e3c5-6791-421a-b0c3-bf454dacef34.jsonl from agent-transcripts over it after this chat ends. Delete the empty ai-logs/cursor/ before zipping.
 Commit:
