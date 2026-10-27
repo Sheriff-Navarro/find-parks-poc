@@ -51,8 +51,7 @@ Sample image URLs were replaced with hotlinked Wikimedia Commons photos. Fiction
 ## Known issues
 
 - Hotlinked images depend on Wikimedia (sample data).
-- The public OpenStreetMap tile servers are appropriate for this exercise. A public launch needs a tile host that allows the traffic.
-- Markers take a pointer click. The keyboard path to a park is the list.
+- Implementation is intentionally quite simple because of time constraints, but a public API, or geolocation would have made this much cooler.
 
 ## How it was checked
 
@@ -61,15 +60,13 @@ Sample image URLs were replaced with hotlinked Wikimedia Commons photos. Fiction
 
 ## Time spent
 
-The exercise is budgeted at 2 hours. The track chats did not record start and stop times, so this draft has no measured duration.
+The track chats did not record start and stop times, and I was working on this on and off through morning. Honest assesment a little over 2.5 hours, hard to gauge with pauses in the middle. Used Wave / Track / Sequencing methods to have agents run in parallel to meet time constraints.
 
 ## Next steps before public use
 
-- Finish the W5.T1 verification pass and fix what it finds.
-- Host the photos, and replace the stand-ins with photos of the named parks, so the gallery has its own copy.
-- Serve map tiles from a host that permits the expected traffic.
-- Add an address and photos for Highland Dog Park if that listing should be complete.
-- Export every project chat, unedited, into `ai-logs/` (W6.T1) before submission.
+- Replace the static JSON with a parks API, so data stays current without a redeploy.
+- Move to a production map provider (for example Mapbox or Google Maps). That needs API keys kept in environment config, not in the repo.
+- Host real park photos instead of hotlinked stand-ins.
 
 ## AI conversation logs
 
@@ -80,3 +77,21 @@ W6.T1 replaces the placeholder below. One line per file: the file name, and the 
 - _(placeholder — W6.T1: file name in `ai-logs/`, and the track it covers)_
 
 ## Verification results
+
+Checked on 2026-10-27 (W5.T1) against the Vite dev server, in Google Chrome driven by Playwright at 375×812 and 1280×800.
+
+**Lint, tests, build.** `npm run lint && npm test && npm run build` passed before and after the fixes below: ESLint clean, 50 tests in 5 files passing, production build succeeds.
+
+**Layouts.** At 375px the home page shows the header, search, list, and "Open map". The map opens full screen with "Show list", and focus moves between the two buttons. At 1280px the map fills the page with the list panel on the left. Detail pages use the full-bleed hero and overlapping card on a phone, and the centered rounded column on desktop. No page scrolls sideways at either width.
+
+**Keyboard.** At both widths, keyboard only: Tab goes to search, then the first park. Enter opens it. Tab reaches "Back to all parks", and Enter returns home. Each stop had a visible blue ring. With `?q=dog`, the same round trip kept the query. On desktop, Tab from the last list item reaches the first marker (ring shown, popup opens), Tab moves to "View details", and Enter opens that park. A mouse click on a marker opens its popup once.
+
+**Detail pages.** All 12 parks were opened at both widths and compared with `src/data/parks.json`: name, address, description, hours, acreage, rating, and stars. No crashes, no console errors. Missing data shows as allowed: Highland Dog Park has no address row and no Photos section, with a placeholder hero. Old Mill shows "No description available". Cedar Hill shows "No rating yet" and no stars. An unknown id shows "Park not found" with a link home. `src/data/parks.json` matches `assets/parks.sample.json` on every field except `images`.
+
+**Search.** "dog" (2), "trails" (6), and "zzz" (0, with the "No parks match" state) gave the same count in the list, on the map, and in the heading, at both widths. The query stays in `?q=`.
+
+**Fixed in this pass**
+- On desktop, some searches ("restrooms", "playground") fitted a marker under the list panel. The map now fits markers into the area right of the panel (`ParkMap.tsx`).
+- On mobile in development, the home page focused "Open map" on load because React StrictMode runs effects twice, so the first Tab left the page. Focus now moves only when the map is opened or closed (`HomePage.tsx`).
+
+**Not fixed** (works as specified): "wifi" finds nothing, because search matches amenity labels as shown ("Wi-Fi"), not descriptions. "wi-fi" finds Central Plaza Green.

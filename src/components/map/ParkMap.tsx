@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { Fragment, useEffect, useMemo, useRef } from 'react'
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import { divIcon, latLngBounds, type LatLngTuple, type Marker as LeafletMarker, type PointTuple } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -10,9 +10,13 @@ const FALLBACK_ZOOM = 11
 const MAX_FIT_ZOOM = 15
 const MARKER_SIZE = 18
 const POPUP_PADDING = 16
+const FIT_PADDING = 32
 
 const MARKER_CLASS =
   'park-marker rounded-full border-2 border-white bg-primary shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
+
+// Shared by every marker; Leaflet creates a separate DOM element per marker from it.
+const PARK_ICON = divIcon({ className: MARKER_CLASS, html: '', iconSize: [MARKER_SIZE, MARKER_SIZE] })
 
 type MappablePark = { park: Park; position: LatLngTuple }
 
@@ -25,18 +29,24 @@ type ParkMapProps = {
   overlayInset?: MapOverlayInset
 }
 
+// Keeps only parks with both coordinates; `== null` treats null and undefined as missing.
 function toMappable(parks: Park[]): MappablePark[] {
-  const result: MappablePark[] = []
-  for (const park of parks) {
-    const lat = park.location?.lat ?? null
-    const lng = park.location?.lng ?? null
-    if (lat === null || lng === null) continue
-    result.push({ park, position: [lat, lng] })
-  }
-  return result
+  return parks.flatMap((park) => {
+    const lat = park.location?.lat
+    const lng = park.location?.lng
+    return lat == null || lng == null ? [] : [{ park, position: [lat, lng] as LatLngTuple }]
+  })
 }
 
-function FitToParks({ positions }: { positions: LatLngTuple[] }) {
+function FitToParks({
+  positions,
+  insetLeft,
+  insetTop,
+}: {
+  positions: LatLngTuple[]
+  insetLeft: number
+  insetTop: number
+}) {
   const map = useMap()
   const key = positions.map(([lat, lng]) => `${lat},${lng}`).join('|')
 
@@ -44,11 +54,15 @@ function FitToParks({ positions }: { positions: LatLngTuple[] }) {
     if (positions.length === 0) {
       map.setView(NYC_CENTER, FALLBACK_ZOOM)
     } else {
-      map.fitBounds(latLngBounds(positions), { padding: [32, 32], maxZoom: MAX_FIT_ZOOM })
+      map.fitBounds(latLngBounds(positions), {
+        paddingTopLeft: [insetLeft + FIT_PADDING, insetTop + FIT_PADDING],
+        paddingBottomRight: [FIT_PADDING, FIT_PADDING],
+        maxZoom: MAX_FIT_ZOOM,
+      })
     }
     // Refit only when the set of coordinates changes, not on every new array identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, key])
+  }, [map, key, insetLeft, insetTop])
 
   return null
 }
@@ -63,10 +77,6 @@ function ParkMarker({ park, position, popupPaddingTopLeft }: ParkMarkerProps) {
   const map = useMap()
   const markerRef = useRef<LeafletMarker>(null)
   const label = `${park.name ?? 'Unnamed park'}, show details`
-  const icon = useMemo(
-    () => divIcon({ className: MARKER_CLASS, html: '', iconSize: [MARKER_SIZE, MARKER_SIZE] }),
-    [],
-  )
 
   useEffect(() => {
     const marker = markerRef.current
@@ -76,16 +86,13 @@ function ParkMarker({ park, position, popupPaddingTopLeft }: ParkMarkerProps) {
     iconEl.setAttribute('aria-label', label)
 
     const popupEl = () => marker.getPopup()?.getElement() ?? null
-    const detailsLink = () =>
-      popupEl()?.querySelector<HTMLAnchorElement>('.leaflet-popup-content a') ?? null
+    const detailsLink = () => popupEl()?.querySelector<HTMLAnchorElement>('.leaflet-popup-content a') ?? null
     const isInside = (node: EventTarget | null) =>
       node instanceof Node && (iconEl.contains(node) || (popupEl()?.contains(node) ?? false))
 
     // Markers remount in list order, so DOM order in the marker pane is list order.
     const nextStop = (): HTMLElement | null => {
-      const icons = Array.from(
-        map.getPane('markerPane')?.querySelectorAll<HTMLElement>('.park-marker') ?? [],
-      )
+      const icons = Array.from(map.getPane('markerPane')?.querySelectorAll<HTMLElement>('.park-marker') ?? [])
       const next = icons[icons.indexOf(iconEl) + 1]
       return next ?? map.getContainer().querySelector<HTMLElement>('.leaflet-control-zoom-in')
     }
@@ -135,55 +142,41 @@ function ParkMarker({ park, position, popupPaddingTopLeft }: ParkMarkerProps) {
         target.focus()
       }
     }
+    // Aborting this signal removes every DOM listener below in one call.
+    const controller = new AbortController()
+    const { signal } = controller
+
     // Leaflet reuses one container per popup, so listeners attach once on first open.
     const onPopupOpen = () => {
       const el = popupEl()
-      el?.addEventListener('keydown', onPopupKeyDown)
-      el?.addEventListener('focusout', onFocusOut)
+      el?.addEventListener('keydown', onPopupKeyDown, { signal })
+      el?.addEventListener('focusout', onFocusOut, { signal })
     }
 
-    iconEl.addEventListener('pointerdown', onPointerDown)
-    iconEl.addEventListener('mousedown', onPointerDown)
-    iconEl.addEventListener('click', onClick)
-    iconEl.addEventListener('focus', onFocus)
-    iconEl.addEventListener('focusout', onFocusOut)
-    iconEl.addEventListener('keydown', onIconKeyDown)
+    // pointerdown covers mouse, touch, and pen, so no separate mousedown listener is needed.
+    iconEl.addEventListener('pointerdown', onPointerDown, { signal })
+    iconEl.addEventListener('click', onClick, { signal })
+    iconEl.addEventListener('focus', onFocus, { signal })
+    iconEl.addEventListener('focusout', onFocusOut, { signal })
+    iconEl.addEventListener('keydown', onIconKeyDown, { signal })
     marker.on('popupopen', onPopupOpen)
 
     return () => {
-      iconEl.removeEventListener('pointerdown', onPointerDown)
-      iconEl.removeEventListener('mousedown', onPointerDown)
-      iconEl.removeEventListener('click', onClick)
-      iconEl.removeEventListener('focus', onFocus)
-      iconEl.removeEventListener('focusout', onFocusOut)
-      iconEl.removeEventListener('keydown', onIconKeyDown)
+      controller.abort()
+      // Leaflet events don't use AbortSignal, so this one is removed by hand.
       marker.off('popupopen', onPopupOpen)
-      const el = popupEl()
-      el?.removeEventListener('keydown', onPopupKeyDown)
-      el?.removeEventListener('focusout', onFocusOut)
     }
   }, [map, label])
 
   // autoPanOnFocus is off because the popup's autoPan already keeps the marker in view;
   // both together pan twice per focus.
   return (
-    <Marker ref={markerRef} position={position} icon={icon} keyboard title={label} autoPanOnFocus={false}>
+    <Marker ref={markerRef} position={position} icon={PARK_ICON} keyboard title={label} autoPanOnFocus={false}>
       <Popup autoPanPaddingTopLeft={popupPaddingTopLeft}>
         <ParkPopup park={park} />
       </Popup>
     </Marker>
   )
-}
-
-function ParkMarkers({ items, popupPaddingTopLeft }: { items: MappablePark[]; popupPaddingTopLeft: PointTuple }) {
-  return items.map(({ park, position }) => (
-    <ParkMarker
-      key={park.id ?? `${position[0]},${position[1]}`}
-      park={park}
-      position={position}
-      popupPaddingTopLeft={popupPaddingTopLeft}
-    />
-  ))
 }
 
 export function ParkMap({ parks, className, overlayInset }: ParkMapProps) {
@@ -201,16 +194,20 @@ export function ParkMap({ parks, className, overlayInset }: ParkMapProps) {
   return (
     <div role="region" aria-label="Map of parks" className={className}>
       {/* keyboard={false} keeps Leaflet from making the container a tab stop. */}
-      <MapContainer
-        center={NYC_CENTER}
-        zoom={FALLBACK_ZOOM}
-        scrollWheelZoom
-        keyboard={false}
-        className="h-full w-full"
-      >
+      <MapContainer center={NYC_CENTER} zoom={FALLBACK_ZOOM} scrollWheelZoom keyboard={false} className="h-full w-full">
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <FitToParks positions={positions} />
-        <ParkMarkers key={orderKey} items={mappable} popupPaddingTopLeft={popupPaddingTopLeft} />
+        <FitToParks positions={positions} insetLeft={insetLeft} insetTop={insetTop} />
+        {/* A new orderKey remounts all markers so they re-enter the DOM in list order. */}
+        <Fragment key={orderKey}>
+          {mappable.map(({ park, position }) => (
+            <ParkMarker
+              key={park.id ?? position.join(',')}
+              park={park}
+              position={position}
+              popupPaddingTopLeft={popupPaddingTopLeft}
+            />
+          ))}
+        </Fragment>
       </MapContainer>
     </div>
   )

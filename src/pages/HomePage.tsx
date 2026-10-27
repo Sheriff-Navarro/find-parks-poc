@@ -87,13 +87,12 @@ function MobileHome({ parks, totalCount, query, onQueryChange }: HomeLayoutProps
   const [mapOpen, setMapOpen] = useState(false)
   const openMapButtonRef = useRef<HTMLButtonElement>(null)
   const showListButtonRef = useRef<HTMLButtonElement>(null)
-  const skipInitialFocus = useRef(true)
+  // Compare with the last value, not a first-run flag: StrictMode runs mount effects twice.
+  const previousMapOpen = useRef(mapOpen)
 
   useEffect(() => {
-    if (skipInitialFocus.current) {
-      skipInitialFocus.current = false
-      return
-    }
+    if (previousMapOpen.current === mapOpen) return
+    previousMapOpen.current = mapOpen
     if (mapOpen) showListButtonRef.current?.focus()
     else openMapButtonRef.current?.focus()
   }, [mapOpen])

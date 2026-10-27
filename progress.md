@@ -1,6 +1,6 @@
 # Find a Park - Progress
 
-Current wave: 4
+Current wave: 6
 
 Status values: TODO, IN PROGRESS, DONE, COMMITTED. Each agent edits only its own block.
 
@@ -219,10 +219,24 @@ Notes:
 Commit:
 
 ## W5.T1 Verification pass
-Status: TODO
+Status: DONE
 Files touched:
+- src/components/map/ParkMap.tsx
+- src/pages/HomePage.tsx
+- README.md ("Verification results" section; removed the stale "Finish the W5.T1 verification pass" next step)
+- progress.md (this block, and "Current wave" set to 6)
 Lint / test / build results:
+- `npm run lint && npm test && npm run build` passed on the first run and again after the fixes: ESLint clean, 50 tests in 5 files passing, production build OK.
 Notes:
+- Browser pass: Google Chrome via Playwright (installed in /tmp, not in this repo) against `npm run dev`, at 375×812 and 1280×800. Screenshots were reviewed by eye; details are in README "Verification results".
+- Keyboard round trip list → detail → "Back to all parks" → home works at both widths with a visible ring on every stop, and keeps `?q=`. W2.T4 follow-up (1) confirmed: Tab from the last list item reaches the first marker with a ring and an open popup, and a mouse click opens the popup once.
+- All 12 detail pages match parks.json, with no crashes or console errors. The known gaps render as allowed. parks.json equals the sample on every field except `images`.
+- Search filters list, markers, and the heading count together at both widths.
+- Fixes: (1) FitToParks ignored the desktop panel, and "restrooms" / "playground" put a marker under it. It now uses `overlayInset` as `paddingTopLeft` (W2.T4 follow-up 2). (2) MobileHome's first-run skip flag broke under StrictMode and focused "Open map" on load in dev. It now compares with the previous `mapOpen` value.
+- Not fixed: "wifi" matches nothing because the label is "Wi-Fi". That is spec-conformant (labels, not descriptions).
+- Human decision: the empty SearchInput label and the missing OSM tile attribution are intentional. Do not add either back.
+- The human edited README "Known issues" during this pass; that section was left as they wrote it.
+- Did not commit.
 Commit:
 
 ## W6.T1 AI log export
