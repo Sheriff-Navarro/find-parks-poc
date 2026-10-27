@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type { Park } from '../../types/park'
 
 type ParkPopupProps = {
@@ -6,6 +6,7 @@ type ParkPopupProps = {
 }
 
 export function ParkPopup({ park }: ParkPopupProps) {
+  const location = useLocation()
   const address = park.location?.address ?? null
 
   return (
@@ -15,6 +16,7 @@ export function ParkPopup({ park }: ParkPopupProps) {
       {park.id !== null && (
         <Link
           to={`/park/${encodeURIComponent(park.id)}`}
+          state={{ backSearch: location.search }}
           className="mt-2 inline-block rounded-xl bg-primary px-3 py-1.5 text-sm font-medium text-white! no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           View details

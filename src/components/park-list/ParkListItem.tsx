@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type { Park } from '../../types/park'
 import { hasAddress } from '../../lib/format.ts'
 import { ParkImage } from '../ui/ParkImage.tsx'
@@ -9,6 +9,7 @@ type ParkListItemProps = {
 }
 
 export function ParkListItem({ park }: ParkListItemProps) {
+  const location = useLocation()
   if (park.id === null) return null
 
   const name = park.name ?? 'Unnamed park'
@@ -18,6 +19,7 @@ export function ParkListItem({ park }: ParkListItemProps) {
   return (
     <Link
       to={`/park/${encodeURIComponent(park.id)}`}
+      state={{ backSearch: location.search }}
       className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-chip focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     >
       <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-chip">

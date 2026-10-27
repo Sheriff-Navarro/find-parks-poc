@@ -110,6 +110,25 @@ Notes:
 - One `eslint-disable-next-line react-hooks/exhaustive-deps` in FitToParks (the effect is keyed on the coordinate string on purpose). Did not run lint/test/build; did not commit.
 Commit:
 
+## W2.T4 Map marker keyboard access (bugfix for W2.T3 / W3.T1)
+Status: DONE
+Files touched:
+- src/components/map/ParkMap.tsx
+- src/pages/HomePage.tsx
+- src/components/map/ParkMap.test.tsx (new)
+- PLAN.md (W2.T4 ownership line only)
+- progress.md (this block)
+Notes:
+- Markers are now `Marker` with an `L.divIcon` (18px `bg-primary` circle, white 2px border, `rounded-full`), replacing CircleMarker, whose SVG paths can never take focus. Leaflet's `keyboard` option gives each icon `tabindex="0"` and `role="button"`. The accessible name "{name}, show details" is set as both `title` and `aria-label`. The focus ring is `focus-visible:ring-2 ring-primary ring-offset-2`. Parks with null coordinates are still skipped. No `index.css` change was needed.
+- `MapContainer keyboard={false}`: Leaflet's keyboard handler is what sets `tabindex=0` on the container, so with it off the container is never a tab stop. Resetting the tabindex after the map is created would race the handler. Trade-off: arrow-key panning and +/- zoom on the map container are gone. The zoom buttons still work by keyboard.
+- Order: the markers are wrapped in `<ParkMarkers key={visible ids joined}>`, so any change to the visible set remounts them in list order. Leaflet appends icons in mount order. Desktop renders ParkListPanel before ParkMap in the DOM, and mobile renders "Show list" before ParkMap. Absolute positioning and z-index keep the visual layout the same. Tab order is now: search, list, markers in list order, then zoom and attribution.
+- Popup on focus: keyboard focus on an icon opens its popup. Focus that comes from a click is skipped (a pointerdown flag), so Leaflet's click toggle still opens the popup once. On an icon, Tab or Enter moves focus to the popup's "View details" link when the popup is open. Leaflet's Enter keypress toggle is suppressed by preventDefault on keydown. From the link, Tab goes to the next marker icon in list order (from the last one it goes to the zoom-in control) and Shift+Tab goes back to its icon. Escape on the icon or the link closes the popup and leaves focus on the icon. When focus moves to anything outside the icon and its popup, the popup closes. When focus moves to nothing (a click on blank space), the popup stays open, so clicking popup text with the mouse does not close it; Leaflet's map click still closes it. Shift+Tab on an icon uses the browser's own order: the previous icon, or the list or "Show list" from the first icon.
+- Map motion: marker `autoPanOnFocus` is off and only the popup's autoPan runs, so there is one pan per focus. New optional `overlayInset` prop on ParkMap. HomePage passes `{ left: 352 }` on desktop (the panel) and `{ top: 56 }` on mobile ("Show list"), so a popup opened under them pans into view.
+- Tests (not run): marker tabindex, role, names in list order, null-coordinate skip, order after filtering to a subset and back, the container not being a tab stop, focus opening the popup with a "View details" link, Tab/Enter into the link, Shift+Tab back, Tab to the next marker, Escape returning focus.
+- Did not run lint, test, or build; did not commit.
+- Follow-ups: (1) W5.T1 should check by hand in a browser: Tab from the last list item lands on the first marker with a visible ring, the popup autoPan clears the desktop panel, and a mouse click still opens the popup once. (2) `FitToParks` still ignores the desktop panel, so it can fit markers under it. Passing `overlayInset.left` as `paddingTopLeft` would fix that. (3) W4.T3 edits ParkPopup. The test finds the link by name "View details", so that label must stay.
+Commit:
+
 ## W3.T1 Home page
 Status: DONE
 Files touched:
@@ -171,12 +190,32 @@ Status: DONE
 Files touched:
 - README.md
 Notes:
-- Drafted README.md from PLAN.md, the W1.T1 image-credit list, and the implemented home/search behavior. Sections: run, what works, what was left out, key decisions, data changes, image credits (file, author, license, link), known issues, how it was checked, time spent, next steps before public use, AI conversation logs, Verification results.
+- Drafted README.md from PLAN.md and the implemented home/search behavior. Sections: run, what works, what was left out, key decisions, data changes, known issues, how it was checked, time spent, next steps before public use, AI conversation logs, Verification results.
 - AI conversation logs explains that every chat is stored unedited in ai-logs/ and that the work followed the Wave/Track prompts in PLAN.md. The file list is a single placeholder line for W6.T1.
 - Verification results is an empty heading for W5.T1.
 - Time spent states the 2-hour budget. Track chats did not record start and stop times, so no measured duration is given.
-- Image URLs were copied from the W1.T1 block. Did not run lint, test, or build, and did not commit.
+- Image credits were drafted, then removed at the human's request: this repo stays local and will not be published. Author, license, and URL remain in the W1.T1 block of this file.
+- Later README trims, also at the human's request: shorter What works, Key decisions (no icons or CircleMarkers bullets), and Data changes; Known issues no longer lists the intentional missing fields; the curl image check was removed from How it was checked. Did not run lint, test, or build, and did not commit.
 - Follow-up: W5.T1 fills Verification results. W6.T1 replaces the ai-logs placeholder. A measured duration can be added before submission if one was kept.
+Commit:
+
+## W4.T3 Preserve search on "Back to all parks" (bugfix for W4.T1 / W2.T2)
+Status: DONE
+Files touched:
+- src/components/ui/BackLink.tsx
+- src/components/park-list/ParkListItem.tsx
+- src/components/map/ParkPopup.tsx
+- src/pages/ParkDetailPage.test.tsx
+- src/pages/SearchRoundTrip.test.tsx (new)
+- PLAN.md (W4.T3 file-ownership line only)
+Notes:
+- Track ID: requested as W4.T2, recorded as W4.T3 because W4.T2 is already the README draft track in PLAN.md and here.
+- ParkListItem and ParkPopup pass `state={{ backSearch: location.search }}` on the Link to `/park/:id`. ParkPopup's props are unchanged, so W2.T4's ParkMap needs no change.
+- BackLink: `to` no longer defaults to "/". With no `to`, it reads `location.state` as `unknown` and links to `/${backSearch}` only when `backSearch` is a string that starts with "?" and has something after it. Anything else, including direct entry to a detail page, goes to "/". An explicit `to` still wins. "Park not found" uses its own plain Link to "/" and is unchanged. Routes, App.tsx, ParkHero, and HomePage are unchanged.
+- Tests: the existing "/" back-link assertion (direct entry) is kept. Added: state `?q=pro` gives href "/?q=pro"; `it.each` fallback to "/" for non-object state, non-string, missing "?", empty, bare "?", and missing key. New SearchRoundTrip.test.tsx renders `App` in a MemoryRouter (App renders only `<Routes>`; BrowserRouter lives in main.tsx), mocks ParkMap, and stubs `matchMedia` for the mobile layout. It covers type "prospect", open the park, Back to all parks, input value and filtered list restored ("1 of N"), plus a no-search round trip and a map popup "View details" round trip.
+- ReadLints is clean on every edited file. Did not run lint, test, or build; did not commit.
+- Follow-up (not owned here): SearchInput's `<label>` is currently empty and `aria-hidden`, so the input has no accessible name (W4.T1's notes say "Search parks"). The round-trip test finds the input by role `searchbox` for that reason. W5.T1 should restore the label text.
+- Follow-up: browser Back still restores `?q=` through history. The pill now pushes a new `/?q=...` entry instead of popping, which is the expected Link behavior.
 Commit:
 
 ## W5.T1 Verification pass

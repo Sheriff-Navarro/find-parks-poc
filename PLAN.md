@@ -66,10 +66,12 @@ flowchart LR
 - **W2.T1**: `src/data/parks.ts`, `src/data/parks.test.ts`, `src/lib/format.ts`.
 - **W2.T2**: `src/components/ui/`* (`StarRating`, `ParkImage`, `BackLink`, `InfoRow`, `AmenityChip`, `Placeholder`), `src/lib/amenities.ts`.
 - **W2.T3**: `src/components/map/ParkMap.tsx`, `src/components/map/ParkPopup.tsx`.
+- **W2.T4** (bugfix for W2.T3 / W3.T1, map marker keyboard access; runs before W5.T1): `src/components/map/ParkMap.tsx`, `src/pages/HomePage.tsx`, new `src/components/map/ParkMap.test.tsx`, `src/index.css` only if needed (not needed). Disjoint from W4.T3; reads `ParkPopup` without editing it and finds its link by DOM position, so a `ParkPopup` change that keeps one link in the popup does not affect it.
 - **W3.T1**: `src/pages/HomePage.tsx`, `src/components/park-list/`*.
 - **W3.T2**: `src/pages/ParkDetailPage.tsx`, `src/components/park-detail/`*, `src/pages/ParkDetailPage.test.tsx`.
 - **W4.T1**: `src/lib/filterParks.ts`, `src/lib/filterParks.test.ts`, `src/components/search/SearchInput.tsx`, `src/pages/HomePage.tsx`, `src/components/park-list/ParkListPanel.tsx`.
 - **W4.T2**: `README.md` only.
+- **W4.T3** (bugfix for W4.T1 / W2.T2, preserve `?q=` on "Back to all parks"; runs before W5.T1): `src/components/ui/BackLink.tsx`, `src/components/park-list/ParkListItem.tsx`, `src/components/map/ParkPopup.tsx`, `src/pages/ParkDetailPage.test.tsx`, new `src/pages/SearchRoundTrip.test.tsx`. Disjoint from W2.T4 (`ParkMap.tsx`, `HomePage.tsx`, `ParkMap.test.tsx`); `ParkPopup` keeps its `{ park }` props so ParkMap is unaffected.
 - **W5.T1**: any file (fixes only), `README.md` finalize.
 - **W6.T1**: `ai-logs/`*, the "AI conversation logs" section of `README.md`.
 - **Every track**: its own block in `progress.md` only.

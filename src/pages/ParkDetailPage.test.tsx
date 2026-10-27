@@ -3,9 +3,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ParkDetailPage } from './ParkDetailPage'
 
-function renderPark(id: string) {
+function renderPark(id: string, state?: unknown) {
   return render(
-    <MemoryRouter initialEntries={[`/park/${id}`]}>
+    <MemoryRouter initialEntries={[{ pathname: `/park/${id}`, state }]}>
       <Routes>
         <Route path="/park/:id" element={<ParkDetailPage />} />
       </Routes>
@@ -106,6 +106,28 @@ describe('ParkDetailPage', () => {
 
     expect(screen.getByRole('img', { name: 'No photo available' })).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /prospect park photo/i })).not.toBeInTheDocument()
+  })
+
+  it('keeps the search query on the back link when it was passed in', () => {
+    renderPark('prospect-park', { backSearch: '?q=pro' })
+
+    expect(screen.getByRole('link', { name: /back to all parks/i })).toHaveAttribute(
+      'href',
+      '/?q=pro',
+    )
+  })
+
+  it.each([
+    ['a non-object state', 'q=pro'],
+    ['a non-string backSearch', { backSearch: 42 }],
+    ['a backSearch without a leading ?', { backSearch: 'q=pro' }],
+    ['an empty backSearch', { backSearch: '' }],
+    ['a bare ? backSearch', { backSearch: '?' }],
+    ['state without backSearch', { other: '?q=pro' }],
+  ])('falls back to / for %s', (_label, state) => {
+    renderPark('prospect-park', state)
+
+    expect(screen.getByRole('link', { name: /back to all parks/i })).toHaveAttribute('href', '/')
   })
 
   it('shows Park not found with a link home for an unknown id', () => {

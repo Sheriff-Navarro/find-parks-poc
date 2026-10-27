@@ -3,7 +3,7 @@ import { List, Map } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { getParks } from '../data/parks.ts'
 import { filterParks } from '../lib/filterParks.ts'
-import { ParkMap } from '../components/map/ParkMap.tsx'
+import { ParkMap, type MapOverlayInset } from '../components/map/ParkMap.tsx'
 import { ParkListPanel } from '../components/park-list/ParkListPanel.tsx'
 import type { Park } from '../types/park'
 
@@ -57,19 +57,27 @@ function useParkSearch() {
   return [query, setQuery] as const
 }
 
+// left-4 + w-80 + a 1rem gap, so popups opened under the panel pan into view.
+const DESKTOP_MAP_INSET: MapOverlayInset = { left: 352 }
+// The "Show list" pill: top-4 plus its height.
+const MOBILE_MAP_INSET: MapOverlayInset = { top: 56 }
+
+// The list and "Show list" come before the map in the DOM so they come first in Tab order;
+// absolute positioning and z-index keep the visual layout.
 function DesktopHome({ parks, totalCount, query, onQueryChange }: HomeLayoutProps) {
   return (
     <div className="relative h-dvh overflow-hidden">
-      <ParkMap
-        parks={parks}
-        className="absolute inset-0 z-0 h-full w-full [&_.leaflet-left]:left-auto! [&_.leaflet-left]:right-0!"
-      />
       <ParkListPanel
         parks={parks}
         totalCount={totalCount}
         query={query}
         onQueryChange={onQueryChange}
         className="absolute top-4 bottom-4 left-4 z-10 w-80 max-w-[calc(100%-2rem)] overflow-hidden rounded-3xl shadow-xl"
+      />
+      <ParkMap
+        parks={parks}
+        overlayInset={DESKTOP_MAP_INSET}
+        className="absolute inset-0 z-0 h-full w-full [&_.leaflet-left]:left-auto! [&_.leaflet-left]:right-0!"
       />
     </div>
   )
@@ -93,7 +101,6 @@ function MobileHome({ parks, totalCount, query, onQueryChange }: HomeLayoutProps
   if (mapOpen) {
     return (
       <div className="relative h-dvh overflow-hidden">
-        <ParkMap parks={parks} className="absolute inset-0 z-0 h-full w-full" />
         <button
           ref={showListButtonRef}
           type="button"
@@ -103,6 +110,7 @@ function MobileHome({ parks, totalCount, query, onQueryChange }: HomeLayoutProps
           <List aria-hidden="true" className="size-4 shrink-0" />
           Show list
         </button>
+        <ParkMap parks={parks} overlayInset={MOBILE_MAP_INSET} className="absolute inset-0 z-0 h-full w-full" />
       </div>
     )
   }
