@@ -11,10 +11,13 @@ Break the Find a Park take-home (Vite + React + TS + Tailwind + react-leaflet) i
 - `ai-logs/`: unedited exports of every AI chat used for this project (created in W6.T1).
 
 Assumptions:
+
 - Images: hotlinked Wikimedia Commons URLs (no downloads, no keys). Exactly one park (`highland-dog-park`) keeps `"images": []` to exercise the empty case. `ParkImage` still falls back to a placeholder when a URL fails to load.
 - Icons: `lucide-react` is the only icon library. Do not add `react-icons` or any other icon package.
 - Tests: Vitest + React Testing Library for data helpers, search filter, and the detail page with missing fields. No Playwright. Lint/test/build run once, in W5.T1.
 - No Linear issues; WTS coordinates live only in this plan since this is a standalone take-home.
+
+
 
 ## How to run this plan
 
@@ -23,6 +26,8 @@ Assumptions:
 3. For each accepted track, run the commit prompt in a separate chat, one at a time.
 4. Start the next wave only when every track in the current wave is committed.
 5. Keep every chat (planning, track, and commit chats). They are exported unedited in W6.T1.
+
+
 
 ## Wave map
 
@@ -44,6 +49,8 @@ flowchart LR
   W5T1 --> W6T1[W6.T1 AI log export]
 ```
 
+
+
 - Wave 1: 1 track (sequential, must finish first).
 - Wave 2: 3 tracks run concurrently.
 - Wave 3: 2 tracks run concurrently.
@@ -51,18 +58,20 @@ flowchart LR
 - Wave 5: 1 track (sequential).
 - Wave 6: 1 track (human-run, last; after the W5.T1 commit).
 
+
+
 ## File ownership (overlap analysis)
 
 - **W1.T1**: `package.json`, `vite.config.ts`, `tsconfig*.json`, `index.html`, `eslint.config.js`, `.gitignore`, `src/main.tsx`, `src/App.tsx`, `src/index.css`, `src/types/park.ts`, `src/data/parks.json`, `src/test/setup.ts`, placeholder `src/pages/HomePage.tsx` + `src/pages/ParkDetailPage.tsx`.
 - **W2.T1**: `src/data/parks.ts`, `src/data/parks.test.ts`, `src/lib/format.ts`.
-- **W2.T2**: `src/components/ui/*` (`StarRating`, `ParkImage`, `BackLink`, `InfoRow`, `AmenityChip`, `Placeholder`), `src/lib/amenities.ts`.
+- **W2.T2**: `src/components/ui/`* (`StarRating`, `ParkImage`, `BackLink`, `InfoRow`, `AmenityChip`, `Placeholder`), `src/lib/amenities.ts`.
 - **W2.T3**: `src/components/map/ParkMap.tsx`, `src/components/map/ParkPopup.tsx`.
-- **W3.T1**: `src/pages/HomePage.tsx`, `src/components/park-list/*`.
-- **W3.T2**: `src/pages/ParkDetailPage.tsx`, `src/components/park-detail/*`, `src/pages/ParkDetailPage.test.tsx`.
+- **W3.T1**: `src/pages/HomePage.tsx`, `src/components/park-list/`*.
+- **W3.T2**: `src/pages/ParkDetailPage.tsx`, `src/components/park-detail/`*, `src/pages/ParkDetailPage.test.tsx`.
 - **W4.T1**: `src/lib/filterParks.ts`, `src/lib/filterParks.test.ts`, `src/components/search/SearchInput.tsx`, `src/pages/HomePage.tsx`, `src/components/park-list/ParkListPanel.tsx`.
 - **W4.T2**: `README.md` only.
 - **W5.T1**: any file (fixes only), `README.md` finalize.
-- **W6.T1**: `ai-logs/*`, the "AI conversation logs" section of `README.md`.
+- **W6.T1**: `ai-logs/`*, the "AI conversation logs" section of `README.md`.
 - **Every track**: its own block in `progress.md` only.
 
 Result: no file is owned by two tracks in the same wave. `App.tsx` routes are registered once in W1, so later tracks never touch it. W4.T1 edits `HomePage.tsx` only after W3.T1 has finished.
@@ -86,13 +95,15 @@ Only Prospect Park is a real park. The others are fictional, so each uses a real
 - `lakeshore-point`: search ("fishing pier waterfront park")
 - `highland-dog-park`: `[]` (intentional empty case; the placeholder renders)
 
+
+
 ## Agent prompts
 
 Each block below is a complete prompt. Copy the whole block; the first line always points the agent at the rule.
 
 ### W1.T1 Scaffold (run alone)
 
-````text
+```text
 Read `.cursor/rules/find-a-park.mdc` first and follow it for this entire task. Then read `PLAN.md` and `progress.md`.
 You are track W1.T1 Scaffold. Only edit files listed for W1.T1 in the PLAN.md file ownership list, plus your own block in progress.md. Mark your block IN PROGRESS now and DONE with notes when finished. Do not run lint, tests, or build. Do not commit.
 
@@ -108,7 +119,9 @@ export type Park = {
 ```
 
 Add `.gitignore` entries for node_modules and dist (keep any existing entries). Copy `assets/parks.sample.json` (leave the original untouched) to `src/data/parks.json` and replace every `images` array with the Wikimedia URLs from "Image sourcing" in PLAN.md (keep `highland-dog-park` as `[]`; change no other field). For the three rows marked "search", query the Commons API, pick a CC BY / CC BY-SA / public-domain photo, and verify each URL returns HTTP 200 with `curl -sI`. Record file name, author, license, and URL for each image in your progress.md block so W4.T2 can credit them. In `src/App.tsx` register routes `/` and `/park/:id` with a catch-all, using placeholder pages. Add npm scripts `lint`, `test`, `build`. Set "Current wave" in progress.md to 2 when done.
-````
+```
+
+
 
 ### W2.T1 Data layer (concurrent with W2.T2, W2.T3)
 
@@ -117,12 +130,14 @@ Read `.cursor/rules/find-a-park.mdc` first and follow it for this entire task. T
 You are track W2.T1 Data layer. Only edit files listed for W2.T1 in the PLAN.md file ownership list, plus your own block in progress.md. Mark your block IN PROGRESS now and DONE with notes when finished. Do not run lint, tests, or build. Do not commit.
 
 Implement `src/data/parks.ts`:
-- `normalizeParks(raw: unknown): Park[]` is the single entry point for park data. It accepts anything, returns [] when the input is not an array, and maps each entry to a Park with every key present. Missing, undefined, or wrongly typed values become null (for example a string rating becomes null, lat: "abc" becomes null). Strings are trimmed and empty strings become null. Arrays keep only non-empty strings. A missing location becomes null. Entries with a null id are dropped, because they cannot have a /park/:id route.
+- `normalizeParks(raw: unknown): Park[]` is the single entry point for park data. It accepts anything, returns [] when the input is not an array, and maps each entry to a Park with every key present. Missing, undefined, or wrongly typed values become null (for example a string rating becomes null, lat: "abc" becomes null). Strings are trimmed and empty strings become null. Arrayscle keep only non-empty strings. A missing location becomes null. Entries with a null id are dropped, because they cannot have a /park/:id route.
 - Normalize once at app startup: the data is static, so parks.ts computes `const PARKS = normalizeParks(rawJson)` (sorted by name, null names last) a single time at module load. getParks() returns PARKS; components must not call normalizeParks themselves.
 - `getParkById(id)` returns `Park | null`.
 
 Parks with null lat/lng still appear in the list but are skipped by the map. Implement `src/lib/format.ts`: formatAcreage, formatRating ("4.4 / 5" or "No rating yet"), hasAddress. Write `src/data/parks.test.ts` covering each known data gap (highland-dog-park has images: [] and location.address: null; Old Mill has description: null; Cedar Hill has rating: null). Also test normalizeParks on non-array input, an entry missing every key, wrong types, and an entry without an id (dropped).
 ```
+
+
 
 ### W2.T2 UI primitives (concurrent)
 
@@ -139,6 +154,8 @@ Build presentational components in `src/components/ui/` that take primitive prop
 All icons come from lucide-react (for example ChevronLeft, Star, StarHalf, Mountain, Bike, Anchor, Dog, Toilet, TreePine). Add `src/lib/amenities.ts` mapping amenity slugs to label + lucide icon (fallback icon MapPin), with a title-cased fallback label for unknown slugs. All interactive elements get the focus ring token.
 ```
 
+
+
 ### W2.T3 Map component (concurrent)
 
 ```text
@@ -147,6 +164,8 @@ You are track W2.T3 Map component. Only edit files listed for W2.T3 in the PLAN.
 
 Build `src/components/map/ParkMap.tsx` with react-leaflet: props `parks: Park[]`, `className?`. OSM tile layer with attribution. Render CircleMarker in the primary color (no default icon asset issues), skipping parks whose location, lat, or lng is null. Fit bounds to the parks, with a sensible NYC fallback center when the list is empty. On marker click, open `src/components/map/ParkPopup.tsx`, which shows the name, the address if present, and a "View details" Link to /park/:id. Import leaflet/dist/leaflet.css. Must work with no geolocation. Give the map container an aria-label.
 ```
+
+
 
 ### W3.T1 Home page (concurrent with W3.T2)
 
@@ -160,6 +179,8 @@ Build `src/pages/HomePage.tsx` and `src/components/park-list/` (ParkList, ParkLi
 Reserve an empty slot above the list for search (filled in W4).
 ```
 
+
+
 ### W3.T2 Detail page (concurrent)
 
 ```text
@@ -172,6 +193,8 @@ Build `src/pages/ParkDetailPage.tsx` and `src/components/park-detail/` (ParkHero
 Show the name (h1), address, StarRating, description or "No description available", info rows (Address, Hours, Size, Rating), amenity grid, and photos (hidden if none). Set document.title. Write `src/pages/ParkDetailPage.test.tsx` for Highland Dog Park (no images, no address), Cedar Hill (no rating), and Old Mill (no description), plus an image whose URL fails (placeholder shown).
 ```
 
+
+
 ### W4.T1 Search (concurrent with W4.T2)
 
 ```text
@@ -180,6 +203,8 @@ You are track W4.T1 Search. Only edit files listed for W4.T1 in the PLAN.md file
 
 Add `src/lib/filterParks.ts` with filterParks(parks, query): case-insensitive match on name, address, and amenity labels; trimmed; empty query returns all. Add `src/lib/filterParks.test.ts`. Build `src/components/search/SearchInput.tsx` (labelled, search icon, clear button, type="search"). In HomePage, keep the query in the URL (?q=) so going back from details preserves it. Feed the filtered parks to both the list and ParkMap. Show the count "Find a Park (4 of 12)" while filtering, and an empty state "No parks match" with a clear action.
 ```
+
+
 
 ### W4.T2 README draft (concurrent)
 
@@ -197,6 +222,8 @@ Draft README.md per the brief:
 - Leave an empty "Verification results" section for W5.T1.
 ```
 
+
+
 ### W5.T1 Verification pass (run alone)
 
 ```text
@@ -205,6 +232,8 @@ You are track W5.T1 Verification pass. You may edit any file, but only to fix pr
 
 This is the only lint/test/build pass in the project. Run `npm run lint && npm test && npm run build` and fix every failure. Manually check at 375px and 1280px widths. Use only the keyboard to tab from the list to a detail page and back, confirming the focus ring is visible. Check every park's detail page for crashes or invented data. Check that search filters both the list and the markers. Fix issues with minimal edits, record findings in the README "Verification results" section, and set "Current wave" in progress.md to 6.
 ```
+
+
 
 ### W6.T1 AI log export (human-run, last)
 
@@ -222,7 +251,9 @@ You are track W6.T1 AI log export. Do not open, edit, rename, or summarize any f
 List every file in ai-logs/ in the README "AI conversation logs" section with one line each describing which track or step it covers (use the file names and PLAN.md, not the file contents). Set "Current wave" in progress.md to complete.
 ```
 
-5. Commit with `[W6.T1] Add unredacted AI conversation logs`, then zip the repo for submission.
+1. Commit with `[W6.T1] Add unredacted AI conversation logs`, then zip the repo for submission.
+
+
 
 ## Commit after each accepted track
 

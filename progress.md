@@ -59,33 +59,92 @@ Notes:
 Commit:
 
 ## W2.T1 Data layer
-Status: TODO
+Status: DONE
 Files touched:
+- src/data/parks.ts
+- src/data/parks.test.ts
+- src/lib/format.ts
 Notes:
-Commit:
+- `normalizeParks(raw: unknown): Park[]` returns [] for non-arrays; non-object entries are treated as empty and dropped (null id). Strings are trimmed, empty becomes null; numbers must be finite (NaN, "4.4", "abc" become null); arrays keep only trimmed non-empty strings, a non-array becomes null; a non-object location becomes null. Output is sorted by name (localeCompare), null names last, so the sort lives inside normalizeParks and PARKS is just `normalizeParks(rawJson)`.
+- `getParks()` returns the same module-level PARKS array every call. `getParkById(id)` accepts `string | null | undefined` (so `useParams().id` can be passed directly) and returns `Park | null`.
+- `src/lib/format.ts`: `formatAcreage(n | null)` returns "526 acres" / "1 acre" / "1,200 acres" or null (callers omit the row). `formatRating(n | null)` returns "4.4 / 5" (always one decimal, so 4 is "4.0 / 5") or "No rating yet". `hasAddress(park)` is true only when location and address are non-null.
+- Tests cover the three known gaps, getParks/getParkById, non-array input, an entry missing every key (dropped) and an id-only entry (all other keys null), wrong types, blank/non-string ids (dropped), trimming, array filtering, null-name sort order, and the format helpers. Tests not run per protocol.
+- Follow-up: none. Duplicate ids are not de-duplicated (getParkById returns the first); the current data has none.
+Commit: aa3fa5b
 
 ## W2.T2 UI primitives
-Status: TODO
+Status: DONE
 Files touched:
+- src/components/ui/StarRating.tsx
+- src/components/ui/ParkImage.tsx
+- src/components/ui/Placeholder.tsx
+- src/components/ui/BackLink.tsx
+- src/components/ui/InfoRow.tsx
+- src/components/ui/AmenityChip.tsx
+- src/components/ui/joinClasses.ts
+- src/lib/amenities.ts
 Notes:
+- Presentational only. No park JSON or getParks/getParkById imports. Optional className on each component for layout. Class strings are joined by joinClasses in src/components/ui/joinClasses.ts (drops undefined and blank parts).
+- StarRating: null or non-finite rating renders nothing. Otherwise role="img" with aria-label "Rated 4.4 out of 5" (one decimal via toFixed). Filled stars use the star token; a half star is an empty Star with StarHalf over the left side. The graphic rounds to the nearest half (4.4 draws four full stars and one half). A rating of 0 still draws five empty stars.
+- ParkImage: null, blank, or failed src renders Placeholder. Placeholder is role="img", aria-label "No photo available", with a Mountain icon on bg-chip. The photo and the fallback both use the caller's className plus h-full w-full; the photo also uses object-cover. A later src resets the error because the failed URL is stored, not a boolean.
+- BackLink: react-router Link, default to="/" and label "Back to all parks". White (bg-surface) pill, ChevronLeft, shadow so it reads on a hero. Focus ring: focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2. It is the only interactive primitive in this track.
+- InfoRow: label (text-muted) and value (text-ink). Renders nothing when value is null or blank, so a missing address or acreage omits the row. Pass formatRating's "No rating yet" through when that string should show.
+- AmenityChip takes a slug and calls getAmenity. getAmenity trims and lowercases, then returns { label, icon }. Unknown slugs use MapPin and a title-cased label ("night-market" → "Night Market"). Every slug in src/data/parks.json has an entry. W4 search should match getAmenity(slug).label.
+- Icon names were checked against lucide-react 1.62 in this install (Waves and Basketball are not exported; lake uses WavesHorizontal, basketball uses CircleDot).
+- Did not run lint, test, or build, and did not commit. These components are not mounted; home and detail pages belong to later tracks, so they were not exercised in the browser.
+- Follow-up: none.
 Commit:
 
 ## W2.T3 Map component
-Status: TODO
+Status: DONE
 Files touched:
+- src/components/map/ParkMap.tsx
+- src/components/map/ParkPopup.tsx
 Notes:
+- `ParkMap({ parks, className? })`: OSM tiles with attribution, a white-ringed primary CircleMarker per park (radius 9), and parks with null location/lat/lng skipped. Imports `leaflet/dist/leaflet.css`. No geolocation is used.
+- Bounds: a `FitToParks` child calls `fitBounds` (padding 32, maxZoom 15, so a single park doesn't zoom all the way in) and refits only when the set of coordinates changes, so a search that returns the same parks doesn't reset the view. With no mappable parks it falls back to NYC (40.7128, -74.006) at zoom 11.
+- aria-label: `MapContainer` passes through only className/id/style, so the label sits on a wrapping `<div role="region" aria-label="Map of parks">`, and `className` goes on that wrapper. **W3.T1: give ParkMap a className with a height (e.g. `h-full` inside a sized parent or `h-dvh`);** the inner map is `h-full w-full`, so without a height it renders 0px tall.
+- Marker color: Leaflet writes fill/stroke as SVG attributes, which can't read CSS variables, so the marker uses `className: 'fill-primary stroke-white'` (the Tailwind token wins over the attribute) with a `#1d4ed8` (blue-700) hex fallback.
+- `ParkPopup({ park })`: name ("Unnamed park" if null), the address only if present, and a "View details" Link to `/park/:id` (id is URI-encoded; the link is omitted if id is null). It uses Tailwind `!` overrides because leaflet.css sets popup `p` margins and `a` color. The Link has the focus-visible ring. Popups render through react-leaflet's portal, so router context works.
+- Keyboard: CircleMarkers aren't keyboard-focusable. The list (W3.T1) is the keyboard path to details, per the must-haves.
+- One `eslint-disable-next-line react-hooks/exhaustive-deps` in FitToParks (the effect is keyed on the coordinate string on purpose). Did not run lint/test/build; did not commit.
 Commit:
 
 ## W3.T1 Home page
-Status: TODO
+Status: DONE
 Files touched:
+- src/pages/HomePage.tsx
+- src/components/park-list/ParkList.tsx
+- src/components/park-list/ParkListItem.tsx
+- src/components/park-list/ParkListPanel.tsx
 Notes:
+- List data is `getParks()`. Each row is a router Link to `/park/:id` (id is URI-encoded, same as ParkPopup) with a ParkImage thumbnail (first image, or the placeholder when images is null or empty), the name ("Unnamed park" when null, matching ParkPopup), the address only when `hasAddress` is true, and a ChevronRight. Focus ring is `focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`. Parks with null lat/lng stay in the list; ParkMap already skips them.
+- Mobile (matchMedia below 48rem): header "Find a Park", scrollable list, and an "Open map" button. That button mounts a full-screen ParkMap with a "Show list" button. Opening the map moves focus to "Show list"; closing it moves focus back to "Open map". The first render does not steal focus.
+- Desktop (48rem and up): full-viewport ParkMap with a floating `rounded-3xl` left panel. The list scrolls inside the panel. Leaflet zoom and attribution (`.leaflet-left`) are shifted to the right so the panel does not cover them. The map wrapper is `z-0` so Leaflet's internal z-index stays under the panel and the "Show list" button.
+- The map is mounted only for the layout on screen. A `display:none` Leaflet container initializes at 0px (W2.T3 note) and would stay blank.
+- Search slot: empty `<div data-slot="park-search">` in ParkListPanel, between the heading and the scrolling list, on both layouts. W4.T1 owns HomePage and ParkListPanel: filter before the parks array is passed to ParkListPanel and ParkMap, and put SearchInput in that slot. The count string "Find a Park (4 of 12)" can replace the h1 text in the panel.
+- Did not run lint, test, or build, and did not commit. Did not start the dev server; the human runs the app, and W5.T1 does the 375px / 1280px check.
+- Follow-up: none for this track.
 Commit:
 
 ## W3.T2 Detail page
-Status: TODO
+Status: DONE
 Files touched:
+- src/pages/ParkDetailPage.tsx
+- src/pages/ParkDetailPage.test.tsx
+- src/components/park-detail/ParkHero.tsx
+- src/components/park-detail/ParkInfoList.tsx
+- src/components/park-detail/AmenityGrid.tsx
+- src/components/park-detail/PhotoGallery.tsx
 Notes:
+- `getParkById(useParams().id)`. Unknown id renders "Park not found" and a "Back to all parks" link to `/`. `document.title` is "{name} · Find a Park", or "Park not found · Find a Park". A null name uses "Unnamed park".
+- Mobile: full-bleed hero (`h-72`), BackLink overlaid, content card `rounded-t-3xl -mt-6` with a drag-handle bar (`md:hidden`). Desktop (`md`): centered `max-w-3xl` column, hero `md:rounded-3xl`, card overlap removed (`md:mt-6`).
+- Shows h1 name, address under the name when present, StarRating (omitted when rating is null), description or "No description available", info rows Address / Hours / Size / Rating (Address and Size omitted when null; Rating uses formatRating, so null is "No rating yet"), amenity grid (omitted when empty), photo gallery (omitted when `images` is null or empty). Every image goes through ParkImage, including the hero, so a failed URL shows the placeholder. The hero still renders for a park with no images (placeholder); only the Photos section is hidden.
+- Address is shown twice when present: under the title and in the Details row.
+- Revision (human feedback): the amenity grid uses tiles instead of chips. Each tile has the icon centered above the label on a `bg-chip rounded-xl` background, in 3 columns on mobile and 4 from `md`. The tile is built in AmenityGrid from `getAmenity`, because AmenityChip is owned by W2.T2. AmenityChip is no longer used by the detail page.
+- Tests cover Highland Dog Park (no address, no `<img>`, no Photos heading, placeholder hero), Cedar Hill (no stars, "No rating yet"), Old Mill ("No description available", two gallery photos), a Prospect Park gallery image whose `error` event shows "No photo available", and an unknown id. Tests not run.
+- Did not run lint, test, or build, and did not commit. Did not open the app; the human runs it, and W5.T1 is the verification pass.
+- Follow-up: none.
 Commit:
 
 ## W4.T1 Search
