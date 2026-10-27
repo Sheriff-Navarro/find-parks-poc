@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { List, Map } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { getParks } from '../data/parks.ts'
+import { filterParks } from '../lib/filterParks.ts'
 import { ParkMap } from '../components/map/ParkMap.tsx'
 import { ParkListPanel } from '../components/park-list/ParkListPanel.tsx'
 import type { Park } from '../types/park'
@@ -25,7 +27,37 @@ function useMdUp(): boolean {
   return mdUp
 }
 
-function DesktopHome({ parks }: { parks: Park[] }) {
+type HomeLayoutProps = {
+  parks: Park[]
+  totalCount: number
+  query: string
+  onQueryChange: (query: string) => void
+}
+
+function useParkSearch() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
+
+  const setQuery = useCallback(
+    (next: string) => {
+      setSearchParams(
+        (params) => {
+          const updated = new URLSearchParams(params)
+          if (next === '') updated.delete('q')
+          else updated.set('q', next)
+          return updated
+        },
+        // Typing should not add a history entry per keystroke.
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  return [query, setQuery] as const
+}
+
+function DesktopHome({ parks, totalCount, query, onQueryChange }: HomeLayoutProps) {
   return (
     <div className="relative h-dvh overflow-hidden">
       <ParkMap
@@ -34,13 +66,16 @@ function DesktopHome({ parks }: { parks: Park[] }) {
       />
       <ParkListPanel
         parks={parks}
+        totalCount={totalCount}
+        query={query}
+        onQueryChange={onQueryChange}
         className="absolute top-4 bottom-4 left-4 z-10 w-80 max-w-[calc(100%-2rem)] overflow-hidden rounded-3xl shadow-xl"
       />
     </div>
   )
 }
 
-function MobileHome({ parks }: { parks: Park[] }) {
+function MobileHome({ parks, totalCount, query, onQueryChange }: HomeLayoutProps) {
   const [mapOpen, setMapOpen] = useState(false)
   const openMapButtonRef = useRef<HTMLButtonElement>(null)
   const showListButtonRef = useRef<HTMLButtonElement>(null)
@@ -74,7 +109,13 @@ function MobileHome({ parks }: { parks: Park[] }) {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-surface">
-      <ParkListPanel parks={parks} className="min-h-0 flex-1" />
+      <ParkListPanel
+        parks={parks}
+        totalCount={totalCount}
+        query={query}
+        onQueryChange={onQueryChange}
+        className="min-h-0 flex-1"
+      />
       <div className="shrink-0 border-t border-slate-200 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           ref={openMapButtonRef}
@@ -91,8 +132,17 @@ function MobileHome({ parks }: { parks: Park[] }) {
 }
 
 export function HomePage() {
-  const parks = getParks()
+  const allParks = getParks()
+  const [query, setQuery] = useParkSearch()
+  const parks = useMemo(() => filterParks(allParks, query), [allParks, query])
   const mdUp = useMdUp()
 
-  return mdUp ? <DesktopHome parks={parks} /> : <MobileHome parks={parks} />
+  const layoutProps: HomeLayoutProps = {
+    parks,
+    totalCount: allParks.length,
+    query,
+    onQueryChange: setQuery,
+  }
+
+  return mdUp ? <DesktopHome {...layoutProps} /> : <MobileHome {...layoutProps} />
 }

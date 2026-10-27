@@ -1,6 +1,6 @@
 # Find a Park - Progress
 
-Current wave: 2
+Current wave: 4
 
 Status values: TODO, IN PROGRESS, DONE, COMMITTED. Each agent edits only its own block.
 
@@ -148,15 +148,35 @@ Notes:
 Commit:
 
 ## W4.T1 Search
-Status: TODO
+Status: DONE
 Files touched:
+- src/lib/filterParks.ts
+- src/lib/filterParks.test.ts
+- src/components/search/SearchInput.tsx
+- src/pages/HomePage.tsx
+- src/components/park-list/ParkListPanel.tsx
+- progress.md (this block, and "Current wave" set to 4 as the wave's first track)
 Notes:
+- `filterParks(parks, query)`: trims and lowercases the query; an empty, blank, or null query returns the same input array. Otherwise it keeps parks whose name, address, or any amenity label (`getAmenity(slug).label`, so "Wi-Fi" and "Bike path" match, but raw slugs like "bike-path" do not) contains the query. Null fields and empty arrays are skipped. Input order is preserved.
+- Tests use fixture parks for name, address, and amenity-label matching, trimming, case, no-address parks, no matches, and no mutation. They also run a few assertions on the real data. Tests not run.
+- `SearchInput`: visible `<label>` "Search parks" tied by `useId`, lucide `Search` icon, `type="search"` (native WebKit cancel button hidden so only one X shows), and a "Clear search" X button (aria-label) that clears and refocuses the input. Escape also clears. Focus ring token on the input and the button. Takes `ref` as a prop (React 19).
+- HomePage: the query lives in `?q=` via `useSearchParams`. Updates use `replace: true`, so typing doesn't add a history entry per keystroke. The URL is the only state, so browser Back from a detail page restores the query, and toggling the mobile map keeps it. The filtered array (memoized) goes to both ParkListPanel and ParkMap on both layouts, so markers filter too. ParkMap refits bounds when the set of matches changes.
+- ParkListPanel: SearchInput fills the W3.T1 slot (inside the header, above the scroller). While filtering, the h1 reads "Find a Park (4 of 12)". An sr-only `role="status"` announces the match count. With zero matches the list area shows "No parks match", the query, and a "Clear search" button that clears and moves focus to the input.
+- Follow-up (W5.T1, not owned here): the detail page's BackLink goes to `/`, so that link drops `?q=`. Browser Back keeps it. To preserve it from the pill too, ParkListItem could pass `state` and BackLink/ParkDetailPage could read it (or use `navigate(-1)`).
+- Did not run lint, test, or build; did not commit.
 Commit:
 
 ## W4.T2 README draft
-Status: TODO
+Status: DONE
 Files touched:
+- README.md
 Notes:
+- Drafted README.md from PLAN.md, the W1.T1 image-credit list, and the implemented home/search behavior. Sections: run, what works, what was left out, key decisions, data changes, image credits (file, author, license, link), known issues, how it was checked, time spent, next steps before public use, AI conversation logs, Verification results.
+- AI conversation logs explains that every chat is stored unedited in ai-logs/ and that the work followed the Wave/Track prompts in PLAN.md. The file list is a single placeholder line for W6.T1.
+- Verification results is an empty heading for W5.T1.
+- Time spent states the 2-hour budget. Track chats did not record start and stop times, so no measured duration is given.
+- Image URLs were copied from the W1.T1 block. Did not run lint, test, or build, and did not commit.
+- Follow-up: W5.T1 fills Verification results. W6.T1 replaces the ai-logs placeholder. A measured duration can be added before submission if one was kept.
 Commit:
 
 ## W5.T1 Verification pass
