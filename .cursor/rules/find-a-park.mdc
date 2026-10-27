@@ -1,0 +1,66 @@
+---
+description: Shared context for every agent working on the Find a Park app. Read before any track work.
+alwaysApply: true
+---
+
+# Find a Park - Project Context
+
+Full plan, prompts, and file ownership: `PLAN.md`. Lifecycle status: `progress.md`.
+
+## Goal
+Residents find local parks via a map, a list, and a detail page. Time budget is 2 hours total: a modest, polished app beats an ambitious one with broken core features.
+
+## Must-haves
+- Map with park markers; selecting one opens or links to its details. Works without the resident's location.
+- List of parks usable without the map.
+- Detail page: name, address, description, amenities, hours, images, acreage, rating.
+- Works on phone and desktop; readable text, clear labels.
+- Keyboard: select a park from the list and open its details, with a visible focus indicator.
+
+## Data rules
+- Source: `src/data/parks.json` (sample in `assets/parks.sample.json`, images rewritten to Wikimedia Commons URLs).
+- UI never imports the JSON. All data comes from `getParks()` / `getParkById()` in `src/data/parks.ts`, which run `normalizeParks(raw: unknown): Park[]` once at module load.
+- In `Park` (`src/types/park.ts`) every key is `T | null`, including `location.lat/lng/address`. Missing becomes `null`, never `undefined`. Null-check every field. Arrays may be empty.
+- Never invent data. Use "No rating yet", "No description available", or omit the row.
+- Known gaps: `highland-dog-park` has no address and `images: []`; `old-mill-botanical-garden` has null description; `cedar-hill-nature-preserve` has null rating.
+- Images are remote and may fail; always render them through `ParkImage` (placeholder fallback).
+- Parks with null coordinates show in the list but not on the map.
+
+## Stack
+Vite, React, TypeScript (strict), Tailwind v4 (`@tailwindcss/vite`, tokens in `src/index.css` `@theme`), `react-router-dom`, `react-leaflet` + OpenStreetMap tiles (no API keys), Vitest + React Testing Library.
+**Icons: `lucide-react` only.** Never add `react-icons` or another icon package.
+
+## Design system
+- Mobile-first. One breakpoint switch at `md` (768px).
+- Tokens: `primary` (blue-700; buttons, markers), `ink` (slate-900), `muted` (slate-500), `surface` (white), `chip` (slate-100), `star` (amber-400). Radius `xl` / `3xl`.
+- Focus ring on every interactive element: `ring-2 ring-primary ring-offset-2`.
+
+## Layouts
+- Home, mobile: header "Find a Park", list, "Open map" button toggles a full-screen map with "Show list".
+- Home, desktop: full-viewport map with a floating, scrollable list panel on the left.
+- Detail, mobile: full-bleed hero, rounded bottom-sheet card overlapping it.
+- Detail, desktop: centered `max-w-3xl` column with a rounded hero.
+- "Back to all parks" white pill over the hero.
+
+## Routes
+`/` home, `/park/:id` detail. Unknown id shows "Park not found" with a link home. Routes are registered only in `src/App.tsx` (W1.T1).
+
+## File ownership
+Edit only the files your track owns (see "File ownership" in `PLAN.md`). Tracks in the same wave never share a file.
+
+## Progress protocol
+- On start: set your block in `progress.md` to IN PROGRESS.
+- On finish: set DONE, list files touched and any follow-ups.
+- Edit only your own block (W5.T1 and the wave's first track may update "Current wave").
+
+## Definition of done per track
+- Owned work complete, including any tests the prompt asks for.
+- No edits outside owned files.
+- Do not run lint/test/build per track; W5.T1 does the single full pass. The human runs the app locally.
+- Build agents never commit. Commits happen in a separate commit prompt after human acceptance, message format `[W#.T#] What was done`.
+
+## Out of scope
+Backend, auth, geolocation, deployment, filters beyond text search.
+
+## AI logs
+Every AI chat used for this project (planning, track, and commit chats) is submitted unedited in `ai-logs/` (W6.T1). Never delete, edit, rename, or summarize chats or files in `ai-logs/`.

@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/*
+  Design tokens from the Find a Park design system.
+  md stays at the default 48rem (768px): the only layout breakpoint.
+  Radius xl (0.75rem) and 3xl (1.5rem) stay the default theme values.
+  Focus ring for every interactive element: ring-2 ring-primary ring-offset-2.
+*/
+@theme inline {
+  --color-primary: var(--color-blue-700);
+  --color-ink: var(--color-slate-900);
+  --color-muted: var(--color-slate-500);
+  --color-surface: var(--color-white);
+  --color-chip: var(--color-slate-100);
+  --color-star: var(--color-amber-400);
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-white);
+  color: var(--color-slate-900);
+  font-family: system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
